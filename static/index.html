@@ -1228,7 +1228,7 @@ function renderControls() {
 function showMap() {
   $placeholder.style.display = 'none';
   $mapWrap.style.display     = 'block';
-  $mapBase.src    = `/maps/${demoInfo.map_name}.png`;
+  $mapBase.src    = `${API_BASE}/maps/${demoInfo.map_name}.png`;
   $heatmapImg.src = '';
 }
 
