@@ -11,7 +11,10 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
-from demo_parser import parse_demo_cached
+# demo_parser / demoparser2 are NOT imported at startup — they pull in
+# polars, pyarrow, pandas, scipy etc. which together exceed the 512 MB
+# free-tier limit before any request is even handled.
+# Instead, import lazily inside load_demo() the first time it is called.
 
 # ── Map coordinate configs (from cs2dave frontend source) ──────────────────────
 # Formula: pixel_x = (world_x - pos_x) / scale
@@ -74,6 +77,9 @@ def load_demo(demo_name: str) -> dict:
     dem_path = os.path.join(DEMOS_DIR, demo_name)
     if not os.path.exists(dem_path):
         raise HTTPException(404, f"Demo file '{demo_name}' not found in {DEMOS_DIR}/")
+    # Lazy import — demoparser2 + its deps (polars/pyarrow/pandas) load here,
+    # not at server startup, to stay within the 512 MB free-tier RAM limit.
+    from demo_parser import parse_demo_cached
     return parse_demo_cached(dem_path)
 
 
