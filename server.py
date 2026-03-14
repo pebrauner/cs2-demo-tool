@@ -1,6 +1,8 @@
+import asyncio
 import io
 import json
 import os
+import urllib.request
 
 import matplotlib
 matplotlib.use("Agg")
@@ -45,7 +47,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Sample demo auto-download ──────────────────────────────────────────────────
+# On a fresh Render deploy the demos/ folder is empty. Download the sample demo
+# in the background so visitors can use the tool without uploading anything.
+SAMPLE_DEMO_URL  = "https://github.com/pebrauner/cs2-demo-tool/releases/download/sample-demo/sample.dem"
+SAMPLE_DEMO_NAME = "sample.dem"
 
+async def _download_sample_demo():
+    if os.listdir(DEMOS_DIR):
+        return  # already have demos, skip
+    dest = os.path.join(DEMOS_DIR, SAMPLE_DEMO_NAME)
+    try:
+        print(f"[startup] Downloading sample demo…")
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: urllib.request.urlretrieve(SAMPLE_DEMO_URL, dest))
+        print(f"[startup] Sample demo ready: {SAMPLE_DEMO_NAME}")
+    except Exception as e:
+        print(f"[startup] Could not download sample demo: {e}")
+
+@app.on_event("startup")
+async def on_startup():
+    asyncio.create_task(_download_sample_demo())
 
 # ── Data loading ──────────────────────────────────────────────────────────────
 
