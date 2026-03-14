@@ -4,17 +4,12 @@ import json
 import os
 import urllib.request
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import numpy as np
 import requests
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
-from scipy.ndimage import gaussian_filter
 
 from demo_parser import parse_demo_cached
 
@@ -490,6 +485,14 @@ def build_heatmap_png(xs, ys, map_path: str, sigma: float = 8.0) -> bytes:
     4. Alpha-composite over the map PNG
     5. Return raw PNG bytes
     """
+    # Lazy imports — keep these heavy libs out of the global scope to save
+    # startup memory on the free Render tier (512 MB limit).
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from scipy.ndimage import gaussian_filter
+
     # 1. Histogram
     grid = np.zeros((MAP_SIZE, MAP_SIZE), dtype=np.float32)
     xi = np.clip(np.round(xs).astype(int), 0, MAP_SIZE - 1)
