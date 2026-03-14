@@ -136,6 +136,10 @@
 
     .map-placeholder { color: var(--muted); text-align: center; line-height: 2; }
     .map-placeholder .icon { font-size: 40px; display: block; margin-bottom: 8px; }
+    #parse-bar-wrap { width: 220px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin: 14px auto 0; }
+    #parse-bar { height: 100%; width: 0; background: var(--accent); border-radius: 2px; transition: width .5s ease; }
+    #parse-elapsed { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 8px; }
+    #parse-sub { font-size: 10px; color: var(--muted); margin-top: 4px; }
 
     .loading-ring {
       position: absolute; inset: 0; z-index: 10;
@@ -445,8 +449,11 @@
 
     <div class="map-area" id="map-area">
       <div class="map-placeholder" id="placeholder">
-        <span class="icon">🗺️</span>
-        Load a demo, then click a player
+        <span class="icon" id="placeholder-icon">🗺️</span>
+        <div id="placeholder-text">Load a demo, then click a player</div>
+        <div id="parse-bar-wrap" style="display:none"><div id="parse-bar"></div></div>
+        <div id="parse-sub" style="display:none">First load may take up to 2 min</div>
+        <div id="parse-elapsed"></div>
       </div>
       <div class="map-wrap" id="map-wrap" style="display:none">
         <img id="map-base"    src="" alt="Map" />
@@ -871,10 +878,13 @@ async function refreshDemoList(selectName = null) {
       if (d === selectName) opt.selected = true;
       $demoSelect.appendChild(opt);
     }
-    if (!selectName && demos.length) $demoSelect.value = demos[0];
+    if (!selectName && demos.length) {
+      $demoSelect.value = demos[0];
+      if (!demoName) loadDemo(); // auto-load first demo on initial page start
+    }
   } catch (_) {}
 }
-refreshDemoList();  // populate on page load
+refreshDemoList();  // populate on page load + auto-load first demo
 
 $demoUpload.addEventListener('change', async () => {
   const file = $demoUpload.files[0];
@@ -903,11 +913,60 @@ $demoUpload.addEventListener('change', async () => {
 $loadBtn.addEventListener('click', loadDemo);
 $demoSelect.addEventListener('change', () => { if ($demoSelect.value) loadDemo(); });
 
+// ── Parse progress bar ────────────────────────────────────────────────────────
+let _parseTimer = null;
+const $parseBarWrap  = document.getElementById('parse-bar-wrap');
+const $parseBar      = document.getElementById('parse-bar');
+const $parseSub      = document.getElementById('parse-sub');
+const $parseElapsed  = document.getElementById('parse-elapsed');
+const $phIcon        = document.getElementById('placeholder-icon');
+const $phText        = document.getElementById('placeholder-text');
+
+function showParseProgress(show) {
+  if (show) {
+    $placeholder.style.display = '';
+    $mapWrap.style.display = 'none';
+    $phIcon.textContent = '⏳';
+    $phText.textContent = 'Parsing demo…';
+    $parseBarWrap.style.display = '';
+    $parseSub.style.display = '';
+    $parseBar.style.transition = 'none';
+    $parseBar.style.width = '0';
+    const start = Date.now();
+    function tick() {
+      const s = (Date.now() - start) / 1000;
+      // Phases: 0-5s → 0-20%, 5-30s → 20-60%, 30-120s → 60-85%
+      let pct;
+      if (s < 5)        pct = (s / 5) * 20;
+      else if (s < 30)  pct = 20 + ((s - 5) / 25) * 40;
+      else              pct = Math.min(85, 60 + ((s - 30) / 90) * 25);
+      $parseBar.style.transition = 'width .5s ease';
+      $parseBar.style.width = pct + '%';
+      $parseElapsed.textContent = Math.floor(s) + 's elapsed';
+    }
+    tick();
+    _parseTimer = setInterval(tick, 500);
+  } else {
+    clearInterval(_parseTimer);
+    $parseBar.style.transition = 'width .3s ease';
+    $parseBar.style.width = '100%';
+    setTimeout(() => {
+      $phIcon.textContent = '🗺️';
+      $phText.textContent = 'Load a demo, then click a player';
+      $parseBarWrap.style.display = 'none';
+      $parseSub.style.display = 'none';
+      $parseElapsed.textContent = '';
+      $parseBar.style.width = '0';
+    }, 350);
+  }
+}
+
 async function loadDemo() {
   const name = $demoSelect.value;
   if (!name) return;
   $loadBtn.disabled = true;
   $loadBtn.textContent = 'Loading…';
+  showParseProgress(true);
   setStatus('Parsing demo…');
   try {
     const r = await fetch(`${API_BASE}/api/demo/${encodeURIComponent(name)}`);
@@ -915,6 +974,7 @@ async function loadDemo() {
     demoInfo = await r.json();
     demoName = name;
     selectedSid = null; filterRound = ''; filterSide = '';
+    showParseProgress(false);
     renderSidebar();
     renderControls();
     showMap();
@@ -924,6 +984,7 @@ async function loadDemo() {
     setStatus('');
     await loadRoundTicks(1);
   } catch (err) {
+    showParseProgress(false);
     setStatus('Failed: ' + err.message, true);
   } finally {
     $loadBtn.disabled = false;
