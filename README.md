@@ -1,8 +1,6 @@
 # CS2 Demo Tool
 
-A local web app for visualizing CS2 demo files — featuring a smooth replay viewer and position heatmaps, built on top of the [cs2dave.com](https://cs2dave.com) API.
-
-![CS2 Demo Tool](https://raw.githubusercontent.com/pebrauner/cs2-demo-tool/main/static/preview.png)
+A local web app for visualizing CS2 demo files — featuring a smooth replay viewer and position heatmaps, built with a custom demo parser on top of `demoparser2`.
 
 ## Features
 
@@ -18,8 +16,8 @@ A local web app for visualizing CS2 demo files — featuring a smooth replay vie
 |---|---|
 | Backend | FastAPI + Uvicorn |
 | Frontend | Vanilla HTML/CSS/JS (single file) |
+| Demo parsing | demoparser2 |
 | Heatmap | NumPy · SciPy gaussian_filter · Matplotlib turbo colormap · Pillow |
-| Data source | [cs2dave.com](https://cs2dave.com) API |
 
 ## Setup
 
@@ -27,16 +25,18 @@ A local web app for visualizing CS2 demo files — featuring a smooth replay vie
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Run the server
+# 2. Drop your .dem files into the demos/ folder
+
+# 3. Run the server
 python -m uvicorn server:app --reload --port 8000
 
-# 3. Open in browser
+# 4. Open in browser
 # http://localhost:8000
 ```
 
 ## Usage
 
-1. Select a demo from the dropdown (demos are fetched from cs2dave.com by filename)
+1. Select a demo from the dropdown or upload a `.dem` file directly
 2. Click **Load** — players appear in the left sidebar
 3. Click any player to open their **Replay** or **Heatmap** view
 4. Use the round chips, side filters, and scrubber to explore the data
@@ -46,7 +46,7 @@ python -m uvicorn server:app --reload --port 8000
 ```
 cs2-demo-tool/
 ├── server.py          # FastAPI backend — API routes + heatmap generation
-├── demo_parser.py     # Local .dem parser (demoparser2 wrapper, Phase 2)
+├── demo_parser.py     # .dem parser (demoparser2 wrapper)
 ├── static/
 │   └── index.html     # Full frontend (single-file app)
 ├── requirements.txt
