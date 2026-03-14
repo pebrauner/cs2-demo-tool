@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
@@ -36,6 +37,14 @@ os.makedirs("maps",     exist_ok=True)
 os.makedirs(DEMOS_DIR,  exist_ok=True)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://pedrobrauner.com", "http://pedrobrauner.com"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
 
 
 # ── Data loading ──────────────────────────────────────────────────────────────

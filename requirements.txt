@@ -1,8 +1,8 @@
 fastapi
 uvicorn[standard]
-a2wsgi
 requests
 numpy
 pillow
 matplotlib
 scipy
+demoparser2

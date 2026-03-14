@@ -587,6 +587,9 @@
 </div><!-- /workspace -->
 
 <script>
+// ── API base URL (empty = same origin for local dev; set to Render URL in prod)
+const API_BASE = 'https://cs2-demo-tool.onrender.com';
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let demoName    = '';
 let demoInfo    = null;
@@ -857,7 +860,7 @@ const EQUIP_ICONS = {
 
 async function refreshDemoList(selectName = null) {
   try {
-    const r = await fetch('/api/demos/list');
+    const r = await fetch(`${API_BASE}/api/demos/list`);
     const { demos } = await r.json();
     // Rebuild options
     $demoSelect.innerHTML = '<option value="">— select a demo —</option>';
@@ -882,7 +885,7 @@ $demoUpload.addEventListener('change', async () => {
   try {
     const fd = new FormData();
     fd.append('file', file);
-    const r = await fetch('/api/demos/upload', { method: 'POST', body: fd });
+    const r = await fetch(`${API_BASE}/api/demos/upload`, { method: 'POST', body: fd });
     if (!r.ok) throw new Error(await r.text());
     const { filename } = await r.json();
     await refreshDemoList(filename);
@@ -907,7 +910,7 @@ async function loadDemo() {
   $loadBtn.textContent = 'Loading…';
   setStatus('Parsing demo…');
   try {
-    const r = await fetch(`/api/demo/${encodeURIComponent(name)}`);
+    const r = await fetch(`${API_BASE}/api/demo/${encodeURIComponent(name)}`);
     if (!r.ok) throw new Error(await r.text());
     demoInfo = await r.json();
     demoName = name;
@@ -1179,7 +1182,7 @@ async function fetchHeatmap() {
   $loadRing.classList.add('show');
   setStatus('Generating heatmap…');
   try {
-    const r = await fetch(`/api/heatmap/${encodeURIComponent(demoName)}?${params}`);
+    const r = await fetch(`${API_BASE}/api/heatmap/${encodeURIComponent(demoName)}?${params}`);
     if (!r.ok) throw new Error(await r.text());
     const blob = await r.blob();
     if ($heatmapImg.src.startsWith('blob:')) URL.revokeObjectURL($heatmapImg.src);
@@ -1197,7 +1200,7 @@ async function fetchHeatmap() {
 async function loadRoundTicks(roundNum) {
   if (!demoName) return;
   try {
-    const r = await fetch(`/api/ticks/${encodeURIComponent(demoName)}?round_num=${roundNum}`);
+    const r = await fetch(`${API_BASE}/api/ticks/${encodeURIComponent(demoName)}?round_num=${roundNum}`);
     if (!r.ok) return;
     if (isPlaying) pause();
     replayData    = await r.json();
@@ -1264,7 +1267,7 @@ async function loadRoundTicks(roundNum) {
 async function loadRoundGrenades(roundNum) {
   if (!demoName) return;
   try {
-    const r = await fetch(`/api/grenades/${encodeURIComponent(demoName)}?round_num=${roundNum}`);
+    const r = await fetch(`${API_BASE}/api/grenades/${encodeURIComponent(demoName)}?round_num=${roundNum}`);
     if (!r.ok) return;
     grenadeData = (await r.json()).grenades;
   } catch (e) {
