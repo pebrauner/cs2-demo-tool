@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.env
+.venv/
+venv/
+
+# Project runtime data (not committed)
+cache/
+maps/
+demos/
+
+# Claude project files
+.claude/
+
+# Misc
+nul
+*.DS_Store
+Thumbs.db

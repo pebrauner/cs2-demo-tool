@@ -1,0 +1,1835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CS2 Demo Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,300;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #080808;
+      --surface:    #0f0f0f;
+      --surface-2:  #161616;
+      --border:     #1c1c1c;
+      --text:       #e2e2e2;
+      --muted:      #5a5a5a;
+      --ct:         #38bdf8;
+      --ct-dim:     rgba(56,189,248,0.08);
+      --t:          #fb923c;
+      --t-dim:      rgba(251,146,60,0.08);
+      --accent:     #e03418;
+      --accent-warm:#ff5c2b;
+      --accent-dim: rgba(224,52,24,0.12);
+      --accent-glow:rgba(224,52,24,0.25);
+      --green:      #4ade80;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      font-size: 13px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; font-weight: 400; color: var(--text);
+      letter-spacing: 2px; white-space: nowrap;
+    }
+    header h1 span { color: var(--accent); }
+    #demo-select {
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 3px; color: var(--text); padding: 7px 11px;
+      font-family: 'Space Mono', monospace; font-size: 11px;
+      outline: none; transition: border-color .15s;
+      max-width: 340px;
+    }
+    #demo-select:focus { border-color: var(--accent); }
+    #load-btn {
+      background: var(--accent); color: #fff; border: none; border-radius: 3px;
+      padding: 7px 18px; font-family: 'Space Mono', monospace;
+      font-weight: 700; font-size: 11px; letter-spacing: 1px;
+      text-transform: uppercase; cursor: pointer;
+      white-space: nowrap; transition: opacity .15s;
+    }
+    #load-btn:hover { opacity: .85; }
+    #load-btn:disabled { opacity: .35; cursor: default; }
+    .upload-label {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 3px; padding: 6px 12px;
+      font-family: 'Space Mono', monospace; font-size: 10px;
+      color: var(--muted); cursor: pointer; white-space: nowrap;
+      transition: border-color .15s, color .15s;
+    }
+    .upload-label:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ── Layout ── */
+    .workspace { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Left Sidebar ── */
+    .sidebar {
+      width: 190px; flex-shrink: 0; background: var(--surface);
+      border-right: 1px solid var(--border); overflow-y: auto; overflow-x: hidden;
+      padding-bottom: 12px;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .team-section { padding-top: 12px; }
+    .team-header { padding: 0 12px 2px; display: flex; flex-direction: column; gap: 2px; }
+    .team-side { font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; }
+    .team-side.ct { color: var(--ct); }
+    .team-side.t  { color: var(--t);  }
+    .team-name-label { font-size: 11px; color: var(--muted); padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+    .player-btn {
+      width: 100%; background: transparent; border: none;
+      border-left: 3px solid transparent; color: var(--text); text-align: left;
+      padding: 7px 12px; cursor: pointer; display: flex; align-items: center;
+      gap: 8px; transition: background .12s, border-color .12s; font-size: 13px;
+    }
+    .player-btn:hover { background: rgba(255,255,255,.04); }
+    .player-btn.active.ct { background: var(--ct-dim); border-left-color: var(--ct); }
+    .player-btn.active.t  { background: var(--t-dim);  border-left-color: var(--t);  }
+    .pip { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .pip.ct { background: var(--ct); }
+    .pip.t  { background: var(--t);  }
+    .sidebar-empty { padding: 32px 16px; color: var(--muted); font-size: 12px; line-height: 1.6; text-align: center; }
+
+    /* ── Center column ── */
+    .center { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+    /* ── Map area ── */
+    .map-area {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      background: var(--bg); position: relative; overflow: hidden;
+    }
+    .map-wrap {
+      position: relative;
+      width:  min(calc(100vh - 168px), calc(100vw - 414px));
+      height: min(calc(100vh - 168px), calc(100vw - 414px));
+      max-width: 900px; max-height: 900px;
+    }
+    .map-wrap canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    }
+    /* img elements kept in DOM as image sources only — canvas renders everything */
+    #map-base, #heatmap-img { display: none; }
+    #player-canvas { z-index: 1; pointer-events: none; }
+
+    .map-placeholder { color: var(--muted); text-align: center; line-height: 2; }
+    .map-placeholder .icon { font-size: 40px; display: block; margin-bottom: 8px; }
+
+    .loading-ring {
+      position: absolute; inset: 0; z-index: 10;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(8,8,8,.65); backdrop-filter: blur(2px);
+    }
+    .loading-ring.show { display: flex; }
+    .spinner {
+      width: 38px; height: 38px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Controls bar ── */
+    .controls {
+      flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--border);
+      padding: 8px 14px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    }
+    .ctrl-group { display: flex; align-items: center; gap: 6px; }
+    .ctrl-label { font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    .btn-row { display: flex; gap: 3px; flex-wrap: wrap; }
+    .chip {
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+      padding: 3px 9px; font-family: 'Space Mono', monospace; font-size: 10px;
+      border-radius: 3px; cursor: pointer;
+      white-space: nowrap; transition: all .12s;
+    }
+    .chip:hover { color: var(--text); border-color: #2e2e2e; }
+    .chip.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(224,52,24,.4); font-weight: 600; }
+    .toggle-label { display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--muted); font-size: 12px; user-select: none; }
+    .toggle-label input { accent-color: var(--accent); cursor: pointer; }
+    .toggle-label:hover { color: var(--text); }
+    #status-msg { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    #status-msg.err { color: #f87171; }
+    .export-select {
+      background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+      border-radius: 3px; font-family: 'Space Mono', monospace; font-size: 10px; padding: 2px 5px; cursor: pointer;
+    }
+    .export-select:focus { outline: none; border-color: var(--accent); }
+
+    /* ── Replay bar ── */
+    .replay-bar {
+      flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--border);
+      padding: 7px 14px 9px; user-select: none;
+    }
+    .replay-top {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 7px;
+    }
+    .replay-btns { display: flex; align-items: center; gap: 4px; }
+    .replay-btn {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      border-radius: 3px; width: 28px; height: 26px; display: flex; align-items: center;
+      justify-content: center; cursor: pointer; font-size: 12px; transition: all .12s;
+      padding: 0;
+    }
+    .replay-btn:hover { color: var(--text); border-color: #2e2e2e; }
+    .replay-btn.play-btn {
+      width: 34px; height: 30px; background: var(--accent); border-color: var(--accent);
+      color: #fff; font-size: 14px; font-weight: 700; border-radius: 3px;
+    }
+    .replay-btn.play-btn:hover { opacity: .88; }
+    .speed-btns { display: flex; gap: 2px; }
+    .speed-chip {
+      background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+      padding: 2px 7px; font-family: 'Space Mono', monospace;
+      font-size: 9px; border-radius: 3px; cursor: pointer;
+      transition: all .12s;
+    }
+    .speed-chip:hover { color: var(--text); }
+    .speed-chip.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(224,52,24,.4); font-weight: 600; }
+    .replay-round-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--muted);
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 2px 8px; border-radius: 3px; white-space: nowrap;
+    }
+    .replay-time { margin-left: auto; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .scrubber-wrap { position: relative; padding: 5px 0; cursor: pointer; }
+    .scrubber-track {
+      position: relative; height: 4px; background: var(--border); border-radius: 2px;
+      overflow: visible;
+    }
+    .scrubber-freeze {
+      position: absolute; left: 0; top: 0; bottom: 0; background: rgba(56,189,248,.22);
+      border-right: 1.5px solid rgba(56,189,248,.6);
+      border-radius: 2px 0 0 2px; pointer-events: none;
+    }
+    .scrubber-fill {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+      background: var(--accent); border-radius: 2px; pointer-events: none;
+    }
+    .scrubber-thumb {
+      position: absolute; top: 50%; left: 0%; transform: translate(-50%, -50%);
+      width: 11px; height: 11px; background: #fff; border: 2px solid var(--accent);
+      border-radius: 50%; pointer-events: none; transition: transform .05s;
+    }
+    .scrubber-wrap:hover .scrubber-thumb { transform: translate(-50%, -50%) scale(1.25); }
+    .scrubber-markers { position: absolute; inset: 0; pointer-events: none; }
+    .s-marker {
+      position: absolute; top: 50%; transform: translate(-50%, -50%);
+      width: 3px; border-radius: 1px; pointer-events: none;
+    }
+    .s-marker.kill { height: 8px;  background: rgba(255,255,255,.3); }
+    .s-marker.bomb { height: 12px; background: var(--t); width: 4px; border-radius: 1px; }
+
+    /* ── Right Stats Panel ── */
+    .stats-panel {
+      width: 224px; flex-shrink: 0; background: var(--surface);
+      border-left: 1px solid var(--border); overflow-y: auto; overflow-x: hidden;
+      display: flex; flex-direction: column;
+    }
+    .stats-panel::-webkit-scrollbar { width: 4px; }
+    .stats-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .sp-section { border-bottom: 1px solid var(--border); padding: 10px 12px; }
+    .sp-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; font-weight: 700; letter-spacing: 1.8px;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+    }
+
+    /* Score */
+    .sp-score-row { display: flex; align-items: center; gap: 4px; }
+    .sp-score-side { flex: 1; }
+    .sp-score-side-name {
+      font-size: 9px; letter-spacing: .8px; text-transform: uppercase;
+      font-weight: 700; margin-bottom: 1px;
+    }
+    .sp-score-side-name.ct { color: rgba(56,189,248,.7); }
+    .sp-score-side-name.t  { color: rgba(251,146,60,.7); }
+    .sp-score-team { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sp-score-num { font-family: 'Bebas Neue', sans-serif; font-size: 36px; font-weight: 400; line-height: 1; letter-spacing: 2px; }
+    .sp-score-num.ct { color: var(--ct); }
+    .sp-score-num.t  { color: var(--t); }
+    .sp-score-sep { font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--border); font-weight: 400; flex-shrink: 0; letter-spacing: 1px; }
+
+    /* Scoreboard */
+    .sp-board { width: 100%; border-collapse: collapse; }
+    .sp-board th {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--muted); text-align: right; padding: 0 3px 5px;
+      font-weight: 700; border-bottom: 1px solid var(--border);
+    }
+    .sp-board th:first-child { text-align: left; padding-left: 0; }
+    .sp-board td {
+      padding: 3px 3px; font-size: 11px; text-align: right;
+      font-variant-numeric: tabular-nums; vertical-align: middle;
+    }
+    .sp-board td:first-child { text-align: left; padding-left: 0; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sp-board tr.ct-row td { color: var(--ct); }
+    .sp-board tr.t-row  td { color: var(--t); }
+    .sp-board tr.ct-row td:not(:first-child),
+    .sp-board tr.t-row  td:not(:first-child) { color: var(--text); }
+    .sp-board tr.divider td { height: 6px; padding: 0; border-top: 1px solid var(--border); }
+
+    /* Kill feed */
+    .sp-kills { display: flex; flex-direction: column; gap: 6px; }
+    .kill-entry {
+      display: flex; align-items: baseline; flex-wrap: wrap;
+      gap: 3px; font-size: 11px; line-height: 1.4;
+    }
+    .kill-attacker { font-weight: 600; }
+    .kill-attacker.ct { color: var(--ct); }
+    .kill-attacker.t  { color: var(--t);  }
+    .kill-victim.ct { color: rgba(56,189,248,.6); }
+    .kill-victim.t  { color: rgba(251,146,60,.6);  }
+    .kill-weapon { color: var(--muted); font-size: 10px; }
+    .kill-hs {
+      font-size: 9px; background: rgba(224,52,24,.15); color: var(--accent);
+      border-radius: 2px; padding: 0 3px; font-weight: 700;
+    }
+    .sp-empty { color: var(--muted); font-size: 11px; font-style: italic; }
+
+    /* Economy */
+    .eco-row {
+      display: flex; flex-direction: column;
+      padding: 4px 0; font-size: 11px;
+      border-bottom: 1px solid rgba(255,255,255,.03);
+    }
+    .eco-row:last-child { border-bottom: none; }
+    .eco-row-main { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
+    .eco-row-inv  { display: flex; flex-wrap: wrap; gap: 2px; }
+    .eco-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; min-width: 0; }
+    .eco-name.ct { color: var(--ct); }
+    .eco-name.t  { color: var(--t);  }
+    .eco-hp-wrap { width: 32px; height: 4px; background: rgba(255,255,255,.1); border-radius: 2px; flex-shrink: 0; overflow: hidden; }
+    .eco-hp-bar  { height: 100%; border-radius: 2px; }
+    .eco-hp-val  { font-size: 10px; color: var(--muted); flex-shrink: 0; min-width: 20px; text-align: right; font-variant-numeric: tabular-nums; }
+    .eco-money { color: var(--green); font-size: 10px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .eco-dead { opacity: 0.35; }
+    .eco-divider { height: 1px; background: var(--border); margin: 4px 0; }
+    .eco-kit {
+      font-size: 9px; color: var(--muted); background: rgba(255,255,255,.06);
+      border-radius: 2px; padding: 0 3px; flex-shrink: 0;
+    }
+    /* Inventory weapon chips */
+    .inv-chip { font-size: 9px; padding: 1px 4px; border-radius: 2px; border: 1px solid transparent; white-space: nowrap; font-weight: 600; letter-spacing: 0.2px; }
+    .inv-chip.active-wep { border-color: currentColor; opacity: 1 !important; }
+    .inv-chip:not(.active-wep) { opacity: 0.5; }
+    .inv-chip.rifle   { color: #60a5fa; background: rgba(96,165,250,0.12); }
+    .inv-chip.sniper  { color: #c084fc; background: rgba(192,132,252,0.12); }
+    .inv-chip.smg     { color: #34d399; background: rgba(52,211,153,0.12); }
+    .inv-chip.pistol  { color: #94a3b8; background: rgba(148,163,184,0.12); }
+    .inv-chip.heavy   { color: #78716c; background: rgba(120,113,108,0.12); }
+    .inv-chip.nade-smoke  { color: #9ca3af; background: rgba(156,163,175,0.12); }
+    .inv-chip.nade-flash  { color: #fde047; background: rgba(253,224,71,0.10); }
+    .inv-chip.nade-he     { color: #f87171; background: rgba(248,113,113,0.12); }
+    .inv-chip.nade-mol    { color: #fb923c; background: rgba(251,146,60,0.12); }
+    .inv-chip.nade-decoy  { color: #a3a3a3; background: rgba(163,163,163,0.10); }
+    .inv-chip.knife { color: #e2c38c; background: rgba(226,195,140,0.12); }
+    .inv-chip.bomb  { color: #f87171; background: rgba(248,113,113,0.15); }
+    .inv-chip { display: inline-flex; align-items: center; gap: 2px; }
+    .chip-name { font-size: 9px; }
+
+    /* ── View mode tabs ── */
+    .view-tab-bar {
+      display: flex; background: var(--surface); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; padding: 0 14px;
+    }
+    .view-tab {
+      background: transparent; border: none; color: var(--muted);
+      padding: 8px 18px; font-family: 'Space Mono', monospace;
+      font-size: 10px; font-weight: 700; cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      transition: color .12s, border-color .12s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Sigma slider ── */
+    #sigma-slider { width: 72px; accent-color: var(--accent); cursor: pointer; vertical-align: middle; }
+    #sigma-val { font-size: 11px; color: var(--text); min-width: 22px; display: inline-block; }
+
+    /* ── Equipment badge icons ── */
+    .equip-badge { display: inline-flex; align-items: center; flex-shrink: 0; opacity: 0.8; }
+    .equip-badge svg { display: block; }
+    .equip-badge.armor  { color: #60a5fa; }
+    .equip-badge.helmet { color: #7dd3fc; }
+    .equip-badge.kit    { color: #4ade80; }
+
+    /* ── Replay round strip ── */
+    .replay-round-strip {
+      display: flex; overflow-x: auto; gap: 3px;
+      margin-top: 6px; padding-bottom: 3px; scrollbar-width: thin;
+    }
+    .replay-round-strip::-webkit-scrollbar { height: 3px; }
+    .replay-round-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .round-chip {
+      flex-shrink: 0; background: var(--bg); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 3px; padding: 1px 5px;
+      font-family: 'Space Mono', monospace; font-size: 9px;
+      cursor: pointer; min-width: 22px; text-align: center;
+      transition: all .1s; line-height: 1.6; white-space: nowrap;
+    }
+    .round-chip:hover { color: var(--text); border-color: #2e2e2e; }
+    .round-chip.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(224,52,24,.4); font-weight: 600; }
+    .round-chip.ct-win { color: rgba(56,189,248,.8); }
+    .round-chip.t-win  { color: rgba(251,146,60,.8);  }
+
+    /* ── Vertical inventory groups ── */
+    .eco-inv-group { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 2px; }
+    .eco-equip-row { gap: 4px; }
+
+    /* ── Disabled heatmap round chip ── */
+    .chip:disabled, .chip.chip-disabled { opacity: 0.25; cursor: not-allowed; pointer-events: none; }
+
+    /* ── Map zoom cursor ── */
+    .map-area.can-pan { cursor: grab; }
+    .map-area.panning  { cursor: grabbing; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <h1>CS2 <span>Demo Tool</span></h1>
+  <select id="demo-select" style="max-width:340px">
+    <option value="">— select a demo —</option>
+  </select>
+  <button id="load-btn">Load</button>
+  <label class="upload-label" title="Upload a .dem file">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5l-4.5 5h3v5h3v-5h3L8 1.5zM2 13h12v1.5H2V13z"/></svg>
+    Upload .dem
+    <input type="file" id="demo-upload" accept=".dem" style="display:none" />
+  </label>
+</header>
+
+<!-- ── Workspace ── -->
+<div class="workspace">
+
+  <!-- Left sidebar: player selector -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-empty">Load a demo<br>to see players</div>
+  </aside>
+
+  <!-- Center: map + controls + replay -->
+  <div class="center">
+
+    <!-- View mode tabs (hidden until demo loaded) -->
+    <div class="view-tab-bar" id="view-tab-bar" style="display:none">
+      <button class="view-tab active" id="tab-replay">▶ Replay</button>
+      <button class="view-tab" id="tab-heatmap">◈ Heatmap</button>
+    </div>
+
+    <div class="map-area" id="map-area">
+      <div class="map-placeholder" id="placeholder">
+        <span class="icon">🗺️</span>
+        Load a demo, then click a player
+      </div>
+      <div class="map-wrap" id="map-wrap" style="display:none">
+        <img id="map-base"    src="" alt="Map" />
+        <img id="heatmap-img" src="" alt="Heatmap" />
+        <canvas id="player-canvas"></canvas>
+        <div class="loading-ring" id="loading-ring"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Heatmap filter controls -->
+    <div class="controls" id="controls" style="display:none">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Round</span>
+        <div class="btn-row" id="round-btns">
+          <button class="chip active" data-round="">All</button>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Side</span>
+        <div class="btn-row" id="side-btns">
+          <button class="chip active" data-side="">All</button>
+          <button class="chip" data-side="CT">CT</button>
+          <button class="chip" data-side="T">T</button>
+        </div>
+      </div>
+      <label class="toggle-label">
+        <input type="checkbox" id="alive-only" checked /> Alive only
+      </label>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Detail</span>
+        <input type="range" id="sigma-slider" min="2" max="30" value="8" step="1" />
+        <span id="sigma-val">8</span>
+      </div>
+      <div class="ctrl-group" style="margin-left:auto; gap:4px;">
+        <select id="export-fmt" class="export-select">
+          <option value="png">PNG</option>
+          <option value="jpeg">JPEG</option>
+        </select>
+        <button id="btn-export" class="chip" title="Export heatmap as image">↓ Export</button>
+      </div>
+      <span id="status-msg"></span>
+    </div>
+
+    <!-- Replay bar -->
+    <div class="replay-bar" id="replay-bar" style="display:none">
+      <div class="replay-top">
+
+        <div class="replay-btns">
+          <button class="replay-btn" id="btn-prev-round" title="Previous round">◀◀</button>
+          <button class="replay-btn" id="btn-restart" title="Back to start">⏮</button>
+          <button class="replay-btn play-btn" id="btn-play" title="Play / Pause">▶</button>
+          <button class="replay-btn" id="btn-end" title="Jump to end">⏭</button>
+          <button class="replay-btn" id="btn-next-round" title="Next round">▶▶</button>
+        </div>
+
+        <div class="speed-btns" id="speed-btns">
+          <button class="speed-chip" data-speed="0.25">¼×</button>
+          <button class="speed-chip" data-speed="0.5">½×</button>
+          <button class="speed-chip active" data-speed="1">1×</button>
+          <button class="speed-chip" data-speed="2">2×</button>
+          <button class="speed-chip" data-speed="4">4×</button>
+        </div>
+
+        <button class="speed-chip active" id="btn-nades" title="Toggle grenade overlay">Nades</button>
+
+        <span class="replay-round-tag" id="replay-round-tag">Round 1</span>
+        <span class="replay-time" id="replay-time">0:00 / 0:00</span>
+      </div>
+
+      <div class="scrubber-wrap" id="scrubber-wrap">
+        <div class="scrubber-track" id="scrubber-track">
+          <div class="scrubber-freeze" id="scrubber-freeze"></div>
+          <div class="scrubber-fill"  id="scrubber-fill"></div>
+          <div class="scrubber-markers" id="scrubber-markers"></div>
+          <div class="scrubber-thumb" id="scrubber-thumb"></div>
+        </div>
+      </div>
+      <div class="replay-round-strip" id="replay-round-strip"></div>
+    </div>
+
+  </div><!-- /center -->
+
+  <!-- Right stats panel -->
+  <aside class="stats-panel" id="stats-panel" style="display:none">
+
+    <!-- Score -->
+    <div class="sp-section">
+      <div class="sp-label">Score</div>
+      <div class="sp-score-row">
+        <div class="sp-score-side">
+          <div class="sp-score-side-name ct">CT Start</div>
+          <div class="sp-score-team" id="sp-ct-team">—</div>
+          <div class="sp-score-num ct" id="sp-ct-score">0</div>
+        </div>
+        <div class="sp-score-sep">:</div>
+        <div class="sp-score-side" style="text-align:right">
+          <div class="sp-score-side-name t">T Start</div>
+          <div class="sp-score-team" id="sp-t-team">—</div>
+          <div class="sp-score-num t" id="sp-t-score">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kill Feed -->
+    <div class="sp-section">
+      <div class="sp-label">Kill Feed</div>
+      <div id="sp-kills"><span class="sp-empty">Load a round to see kills</span></div>
+    </div>
+
+    <!-- Economy -->
+    <div class="sp-section">
+      <div class="sp-label">Economy</div>
+      <div id="sp-eco"><span class="sp-empty">—</span></div>
+    </div>
+
+    <!-- Scoreboard -->
+    <div class="sp-section">
+      <div class="sp-label">Scoreboard</div>
+      <table class="sp-board">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>K</th>
+            <th title="Assists">A</th>
+            <th>D</th>
+            <th>HS%</th>
+            <th title="Average Damage per Round">ADR</th>
+            <th title="Kill/Assist/Survive/Trade %">KAST%</th>
+            <th title="Grenades Thrown">Nades</th>
+          </tr>
+        </thead>
+        <tbody id="sp-board-body"></tbody>
+      </table>
+    </div>
+
+  </aside>
+
+</div><!-- /workspace -->
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let demoName    = '';
+let demoInfo    = null;
+let selectedSid = null;
+let filterRound = '';
+let filterSide  = '';
+
+// Replay state
+let replayData    = null;
+let replayRound   = 1;
+let currentSec    = 0;
+let isPlaying     = false;
+let playSpeed     = 1;
+let rafId         = null;
+let lastRafTime   = null;
+let lastKillCount = -1;
+let lastEcoFrame  = -1;
+let grenadeData   = null;
+let showNades     = true;
+let viewMode      = 'replay';   // 'replay' | 'heatmap'
+let sigmaDeb      = null;       // debounce timer for sigma slider
+// Map zoom / pan
+let mapScale = 1, mapX = 0, mapY = 0;
+let isPanning = false, panStartX = 0, panStartY = 0, panStartMapX = 0, panStartMapY = 0;
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const $demoSelect   = document.getElementById('demo-select');
+const $demoUpload   = document.getElementById('demo-upload');
+const $loadBtn      = document.getElementById('load-btn');
+const $sidebar      = document.getElementById('sidebar');
+const $placeholder  = document.getElementById('placeholder');
+const $mapWrap      = document.getElementById('map-wrap');
+const $mapBase      = document.getElementById('map-base');
+const $heatmapImg   = document.getElementById('heatmap-img');
+const $loadRing     = document.getElementById('loading-ring');
+const $controls     = document.getElementById('controls');
+const $replayBar    = document.getElementById('replay-bar');
+const $statsPanel   = document.getElementById('stats-panel');
+const $roundBtns    = document.getElementById('round-btns');
+const $sideBtns     = document.getElementById('side-btns');
+const $aliveOnly    = document.getElementById('alive-only');
+const $status       = document.getElementById('status-msg');
+// replay controls
+const $btnRestart     = document.getElementById('btn-restart');
+const $btnPlay        = document.getElementById('btn-play');
+const $btnEnd         = document.getElementById('btn-end');
+const $speedBtns      = document.getElementById('speed-btns');
+const $replayRoundTag = document.getElementById('replay-round-tag');
+const $replayTime     = document.getElementById('replay-time');
+const $scrubberTrack  = document.getElementById('scrubber-track');
+const $scrubberFreeze = document.getElementById('scrubber-freeze');
+const $scrubberFill   = document.getElementById('scrubber-fill');
+const $scrubberThumb  = document.getElementById('scrubber-thumb');
+const $scrubberMarkers= document.getElementById('scrubber-markers');
+// stats panel
+const $spCtTeam   = document.getElementById('sp-ct-team');
+const $spTTeam    = document.getElementById('sp-t-team');
+const $spCtScore  = document.getElementById('sp-ct-score');
+const $spTScore   = document.getElementById('sp-t-score');
+const $spKills    = document.getElementById('sp-kills');
+const $spEco      = document.getElementById('sp-eco');
+const $spBoardBody= document.getElementById('sp-board-body');
+// canvas
+const canvas   = document.getElementById('player-canvas');
+const ctx      = canvas.getContext('2d');
+const $btnNades = document.getElementById('btn-nades');
+// view tabs + new controls
+const $viewTabBar   = document.getElementById('view-tab-bar');
+const $tabReplay    = document.getElementById('tab-replay');
+const $tabHeatmap   = document.getElementById('tab-heatmap');
+const $scrubberWrap = document.getElementById('scrubber-wrap');
+const $sigmaSlider  = document.getElementById('sigma-slider');
+const $sigmaVal     = document.getElementById('sigma-val');
+const $btnPrevRound     = document.getElementById('btn-prev-round');
+const $btnNextRound     = document.getElementById('btn-next-round');
+const $mapArea          = document.getElementById('map-area');
+const $replayRoundStrip = document.getElementById('replay-round-strip');
+
+// ── Canvas sizing ─────────────────────────────────────────────────────────────
+function syncCanvas() {
+  const w = $mapWrap.clientWidth;
+  const h = $mapWrap.clientHeight;
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width  = w;
+    canvas.height = h;
+    if (replayData) drawAtTime(currentSec);
+  }
+}
+new ResizeObserver(syncCanvas).observe($mapWrap);
+
+// Redraw when images finish loading (map may load after first drawAtTime call)
+$mapBase.addEventListener('load', () => {
+  if (viewMode === 'heatmap') drawHeatmapCanvas();
+  else if (replayData) drawAtTime(currentSec);
+});
+$heatmapImg.addEventListener('load', () => {
+  if (viewMode === 'heatmap') drawHeatmapCanvas();
+});
+
+function toCanvas(px, py) {
+  return [px * canvas.width / 1024, py * canvas.height / 1024];
+}
+
+// ── Map zoom / pan ─────────────────────────────────────────────────────────────
+function applyMapTransform() {
+  $mapArea.classList.toggle('can-pan', mapScale > 1);
+  if (viewMode === 'heatmap') drawHeatmapCanvas();
+  else if (replayData)        drawAtTime(currentSec);
+}
+function resetMapZoom() { mapScale = 1; mapX = 0; mapY = 0; applyMapTransform(); }
+
+$mapArea.addEventListener('wheel', e => {
+  if ($mapWrap.style.display === 'none') return;
+  e.preventDefault();
+  const aRect    = $mapArea.getBoundingClientRect();
+  const relX     = e.clientX - aRect.left - aRect.width  / 2;
+  const relY     = e.clientY - aRect.top  - aRect.height / 2;
+  const newScale = Math.max(1, Math.min(10, mapScale * (e.deltaY < 0 ? 1.18 : 1 / 1.18)));
+  if (newScale === 1) {
+    mapScale = 1; mapX = 0; mapY = 0;
+  } else {
+    const ratio = newScale / mapScale;
+    mapX = relX * (1 - ratio) + mapX * ratio;
+    mapY = relY * (1 - ratio) + mapY * ratio;
+    mapScale = newScale;
+  }
+  applyMapTransform();
+}, { passive: false });
+
+$mapArea.addEventListener('mousedown', e => {
+  if (e.button !== 0 || mapScale <= 1) return;
+  if (e.target.closest('#scrubber-wrap')) return;
+  isPanning = true;
+  panStartX = e.clientX; panStartY = e.clientY;
+  panStartMapX = mapX;   panStartMapY = mapY;
+  $mapArea.classList.add('panning');
+  e.preventDefault();
+});
+window.addEventListener('mousemove', e => {
+  if (!isPanning) return;
+  mapX = panStartMapX + (e.clientX - panStartX);
+  mapY = panStartMapY + (e.clientY - panStartY);
+  applyMapTransform();
+});
+window.addEventListener('mouseup', e => {
+  if (isPanning && e.button === 0) { isPanning = false; $mapArea.classList.remove('panning'); }
+});
+$mapArea.addEventListener('dblclick', () => { if (mapScale > 1) resetMapZoom(); });
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function parseDemoName(raw) {
+  const m = raw.trim().match(/([^/\\]+\.dem)$/i);
+  return m ? m[1] : raw.trim();
+}
+function setStatus(msg, isErr = false) {
+  $status.textContent = msg;
+  $status.className   = isErr ? 'err' : '';
+}
+function fmtTime(s) {
+  const m   = Math.floor(s / 60);
+  const sec = Math.floor(s % 60).toString().padStart(2, '0');
+  return `${m}:${sec}`;
+}
+function fmtMoney(n) {
+  return '$' + n.toLocaleString();
+}
+
+// Map kill weapon codes to readable names
+const WEAPON_NAMES = {
+  ak47:'AK-47', glock:'Glock', m4a1_s:'M4A1-S', m4a4:'M4A4',
+  usp_silencer:'USP-S', deagle:'Deagle', awp:'AWP', mp9:'MP9',
+  mac10:'MAC-10', ump45:'UMP-45', p90:'P90', sg556:'SG553',
+  aug:'AUG', famas:'FAMAS', galilar:'Galil', ssg08:'SSG 08',
+  g3sg1:'G3SG1', scar20:'SCAR-20', hkp2000:'P2000', m249:'M249',
+  negev:'Negev', nova:'Nova', sawedoff:'Sawed-Off', mag7:'MAG-7',
+  xm1014:'XM1014', bizon:'PP-Bizon', mp5sd:'MP5-SD', mp7:'MP7',
+  fiveseven:'Five-7', cz75a:'CZ75', tec9:'Tec-9',
+  elite:'Berettas', p250:'P250', p2000: 'P2000',
+  knife_t:'Knife', knife:'Knife', bayonet:'Knife',
+  c4:'C4', inferno:'Molotov', smokegrenade:'Smoke',
+  flashbang:'Flash', hegrenade:'HE', incgrenade:'Molotov',
+  decoy:'Decoy',
+};
+function weaponDisplay(code) {
+  if (!code) return '';
+  return WEAPON_NAMES[code.toLowerCase()] || code;
+}
+
+const WIN_REASONS = {
+  ct_killed:    'T Elim',
+  t_killed:     'CT Elim',
+  bomb_exploded:'Bomb',
+  bomb_defused: 'Defused',
+  t_escaped:    'Escaped',
+  ct_nodefuse:  'No Defuse',
+};
+
+// ── Weapon categorization ──────────────────────────────────────────────────────
+function getWeaponCategory(name) {
+  const n = (name || '').toLowerCase();
+  if (!n) return 'pistol';
+  if (/knife|karambit|bayonet|stiletto|talon|ursus|navaja|falchion|bowie|butterfly|gut\b|flip\b|huntsman|shadow|m9 b/.test(n)) return 'knife';
+  if (/\bawp\b|ssg 08|g3sg1|scar-20/.test(n)) return 'sniper';
+  if (/smoke grenade/.test(n)) return 'nade-smoke';
+  if (/flashbang/.test(n)) return 'nade-flash';
+  if (/he grenade|high.explosive/.test(n)) return 'nade-he';
+  if (/molotov|incendiary/.test(n)) return 'nade-mol';
+  if (/decoy/.test(n)) return 'nade-decoy';
+  if (/c4|explosive/.test(n)) return 'bomb';
+  if (/mp9|mac-10|ump.45|p90|pp-bizon|mp5|mp7|bizon/.test(n)) return 'smg';
+  if (/nova\b|xm1014|sawed.off|mag-7|m249|negev/.test(n)) return 'heavy';
+  if (/glock|usp|p2000|p250|desert eagle|five-seven|cz75|tec-9|dual beret|r8 revol|deagle/.test(n)) return 'pistol';
+  return 'rifle';
+}
+
+const WEAPON_SHORT = {
+  'AK-47':'AK-47','M4A4':'M4A4','M4A1-S':'M4A1-S','SG 553':'SG553',
+  'AUG':'AUG','FAMAS':'FAMAS','Galil AR':'Galil','AWP':'AWP',
+  'SSG 08':'Scout','G3SG1':'G3SG1','SCAR-20':'Scar','MP9':'MP9',
+  'MAC-10':'MAC-10','UMP-45':'UMP-45','P90':'P90','PP-Bizon':'Bizon',
+  'MP5-SD':'MP5-SD','MP7':'MP7','Glock-18':'Glock','USP-S':'USP-S',
+  'P2000':'P2000','P250':'P250','Desert Eagle':'Deagle',
+  'Five-SeveN':'Five7','CZ75-Auto':'CZ75','Tec-9':'Tec-9',
+  'Dual Berettas':'Duos','R8 Revolver':'R8','Nova':'Nova',
+  'XM1014':'XM1014','Sawed-Off':'Sawed','MAG-7':'MAG-7',
+  'M249':'M249','Negev':'Negev','Smoke Grenade':'Smoke',
+  'Flashbang':'Flash','HE Grenade':'HE','Incendiary Grenade':'Incen',
+  'Molotov':'Molly','Decoy Grenade':'Decoy','C4 Explosive':'C4',
+  'Karambit':'Kara','Butterfly Knife':'Butter','Bayonet':'Bay',
+  'M9 Bayonet':'M9Bay','Gut Knife':'Gut','Flip Knife':'Flip',
+  'Huntsman Knife':'Hunt','Falchion Knife':'Falch','Knife':'Knife',
+};
+function shortWeaponName(name) {
+  return WEAPON_SHORT[name] || (name ? name.slice(0,7) : '?');
+}
+
+// ── Grenade rendering constants ───────────────────────────────────────────────
+const NADE_COLORS = {
+  smoke:   { traj:'#b0b0b0', dot:'#d0d0d0', area:'rgba(180,180,180,0.55)' },
+  flash:   { traj:'#ffff80', dot:'#ffffe0', area:'rgba(255,255,180,0.60)' },
+  he:      { traj:'#ff6600', dot:'#ff4400', area:'rgba(255,80,0,0.55)'    },
+  molotov: { traj:'#ff4400', dot:'#ff6600', area:'rgba(255,60,0,0.45)'    },
+};
+const NADE_RADIUS = { smoke:90, flash:55, he:65, molotov:85 };
+
+// ── Inline SVG icons ──────────────────────────────────────────────────────────
+const WEAPON_SVG = {
+  rifle:       '<svg viewBox="0 0 18 7" fill="currentColor" width="14" height="6"><rect x="0" y="2.5" width="11" height="2" rx="0.5"/><rect x="11" y="2.2" width="6" height="1.2" rx="0.4"/><rect x="2.5" y="4.5" width="1.5" height="2.5" rx="0.4"/><rect x="6.5" y="1" width="3" height="1.5" rx="0.3"/></svg>',
+  sniper:      '<svg viewBox="0 0 22 7" fill="currentColor" width="16" height="6"><rect x="0" y="2.5" width="14" height="2" rx="0.5"/><rect x="14" y="2.2" width="7" height="1.2" rx="0.4"/><rect x="2.5" y="4.5" width="1.5" height="2.5" rx="0.4"/><rect x="9" y="0.8" width="5" height="2.2" rx="0.8"/></svg>',
+  smg:         '<svg viewBox="0 0 15 8" fill="currentColor" width="12" height="7"><rect x="0" y="2" width="9" height="2.5" rx="0.5"/><rect x="9" y="2.2" width="5" height="1.2" rx="0.4"/><rect x="2" y="4.5" width="1.5" height="3" rx="0.4"/><rect x="4.5" y="0.5" width="2.5" height="1.5" rx="0.3"/></svg>',
+  pistol:      '<svg viewBox="0 0 11 9" fill="currentColor" width="10" height="8"><rect x="0" y="1.5" width="7" height="4.5" rx="1.2"/><rect x="7" y="1.5" width="3.5" height="1.2" rx="0.4"/><rect x="1.5" y="6" width="2" height="2.5" rx="0.5"/></svg>',
+  heavy:       '<svg viewBox="0 0 16 8" fill="currentColor" width="14" height="7"><rect x="0" y="2" width="10" height="3.5" rx="1"/><rect x="10" y="2.8" width="5.5" height="1.5" rx="0.4"/><rect x="2" y="5.5" width="2" height="2.5" rx="0.4"/></svg>',
+  knife:       '<svg viewBox="0 0 14 7" fill="currentColor" width="12" height="6"><path d="M0,3.5 L9.5,1 L12,3.5 L9.5,6 Z"/><rect x="0" y="3" width="2.5" height="1" rx="0.4"/></svg>',
+  'nade-smoke':'<svg viewBox="0 0 8 11" fill="currentColor" width="7" height="10"><circle cx="4" cy="6.5" r="3.5"/><rect x="3" y="1.5" width="2" height="3" rx="0.5"/><rect x="2.5" y="0.5" width="3" height="1.5" rx="0.5"/></svg>',
+  'nade-flash':'<svg viewBox="0 0 8 11" fill="currentColor" width="7" height="10"><circle cx="4" cy="6.5" r="3.5"/><rect x="3" y="1.5" width="2" height="3" rx="0.5"/><rect x="2.5" y="0.5" width="3" height="1.5" rx="0.5"/></svg>',
+  'nade-he':   '<svg viewBox="0 0 8 11" fill="currentColor" width="7" height="10"><circle cx="4" cy="6.5" r="3.5"/><rect x="3" y="1.5" width="2" height="3" rx="0.5"/><rect x="2.5" y="0.5" width="3" height="1.5" rx="0.5"/></svg>',
+  'nade-mol':  '<svg viewBox="0 0 8 11" fill="currentColor" width="7" height="10"><circle cx="4" cy="6.5" r="3.5"/><rect x="3" y="1.5" width="2" height="3" rx="0.5"/><rect x="2.5" y="0.5" width="3" height="1.5" rx="0.5"/></svg>',
+  'nade-decoy':'<svg viewBox="0 0 8 11" fill="currentColor" width="7" height="10"><circle cx="4" cy="6.5" r="3.5"/><rect x="3" y="1.5" width="2" height="3" rx="0.5"/><rect x="2.5" y="0.5" width="3" height="1.5" rx="0.5"/></svg>',
+  bomb:        '<svg viewBox="0 0 11 9" fill="currentColor" width="10" height="8"><rect x="0" y="2.5" width="9" height="6" rx="1.5"/><rect x="3" y="0.5" width="3" height="3" rx="0.5"/></svg>',
+};
+const EQUIP_ICONS = {
+  armor:  '<svg viewBox="0 0 12 13" fill="currentColor" width="12" height="13"><path d="M6,12 C6,12 1.5,9.5 1.5,5.5 L1.5,3 L6,1.5 L10.5,3 L10.5,5.5 C10.5,9.5 6,12 6,12Z"/></svg>',
+  helmet: '<svg viewBox="0 0 12 11" fill="currentColor" width="12" height="11"><path d="M2,9.5 L2,6 Q2,1.5 6,1.5 Q10,1.5 10,6 L10,9.5 Z"/><rect x="1" y="9.5" width="10" height="1.5" rx="0.7"/></svg>',
+  kit:    '<svg viewBox="0 0 12 11" fill="currentColor" width="12" height="11"><rect x="1" y="3.5" width="10" height="7" rx="1.2"/><rect x="4" y="1.5" width="4" height="3" rx="0.5"/><rect x="5.5" y="5.5" width="1" height="4.5" rx="0.4"/><rect x="3.5" y="7" width="5" height="1" rx="0.4"/></svg>',
+};
+
+// ── Demo list + upload ────────────────────────────────────────────────────────
+
+async function refreshDemoList(selectName = null) {
+  try {
+    const r = await fetch('/api/demos/list');
+    const { demos } = await r.json();
+    // Rebuild options
+    $demoSelect.innerHTML = '<option value="">— select a demo —</option>';
+    for (const d of demos) {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d;
+      if (d === selectName) opt.selected = true;
+      $demoSelect.appendChild(opt);
+    }
+    if (!selectName && demos.length) $demoSelect.value = demos[0];
+  } catch (_) {}
+}
+refreshDemoList();  // populate on page load
+
+$demoUpload.addEventListener('change', async () => {
+  const file = $demoUpload.files[0];
+  if (!file) return;
+  $loadBtn.disabled = true;
+  $loadBtn.textContent = 'Uploading…';
+  setStatus('Uploading ' + file.name + '…');
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await fetch('/api/demos/upload', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error(await r.text());
+    const { filename } = await r.json();
+    await refreshDemoList(filename);
+    setStatus('Uploaded ' + filename + '. Click Load to parse it.');
+  } catch (err) {
+    setStatus('Upload failed: ' + err.message, true);
+  } finally {
+    $loadBtn.disabled = false;
+    $loadBtn.textContent = 'Load';
+    $demoUpload.value = '';
+  }
+});
+
+// ── Load demo ─────────────────────────────────────────────────────────────────
+$loadBtn.addEventListener('click', loadDemo);
+$demoSelect.addEventListener('change', () => { if ($demoSelect.value) loadDemo(); });
+
+async function loadDemo() {
+  const name = $demoSelect.value;
+  if (!name) return;
+  $loadBtn.disabled = true;
+  $loadBtn.textContent = 'Loading…';
+  setStatus('Parsing demo…');
+  try {
+    const r = await fetch(`/api/demo/${encodeURIComponent(name)}`);
+    if (!r.ok) throw new Error(await r.text());
+    demoInfo = await r.json();
+    demoName = name;
+    selectedSid = null; filterRound = ''; filterSide = '';
+    renderSidebar();
+    renderControls();
+    showMap();
+    renderScore();
+    renderScoreboard();
+    $statsPanel.style.display = '';
+    setStatus('');
+    await loadRoundTicks(1);
+  } catch (err) {
+    setStatus('Failed: ' + err.message, true);
+  } finally {
+    $loadBtn.disabled = false;
+    $loadBtn.textContent = 'Load';
+  }
+}
+
+// ── Score panel ───────────────────────────────────────────────────────────────
+function computeTeamScores(upToRound = Infinity) {
+  if (!demoInfo?.rounds_info?.length) return { ct: 0, t: 0 };
+  let ct = 0, t = 0;
+  for (const rd of demoInfo.rounds_info) {
+    if (rd.round_num > upToRound) break;
+    if (!rd.winner) continue;
+    const half = Math.floor((rd.round_num - 1) / 12) % 2;
+    if (rd.winner === 'CT') { if (half === 0) ct++; else t++; }
+    else if (rd.winner === 'T') { if (half === 0) t++; else ct++; }
+  }
+  return { ct, t };
+}
+
+function computeKillStats(upToRound = Infinity) {
+  const stats = {};
+  for (const sid of Object.keys(demoInfo.players))
+    stats[sid] = { kills: 0, deaths: 0, hs: 0, assists: 0 };
+  for (const rd of (demoInfo.rounds_kills || [])) {
+    if (rd.round_num > upToRound) break;
+    for (const k of rd.kills) {
+      if (k.attacker_steamid in stats) {
+        stats[k.attacker_steamid].kills++;
+        if (k.headshot) stats[k.attacker_steamid].hs++;
+      }
+      if (k.victim_steamid in stats) stats[k.victim_steamid].deaths++;
+      if (k.assister_steamid && k.assister_steamid in stats)
+        stats[k.assister_steamid].assists++;
+    }
+  }
+  return stats;
+}
+
+function computeNadeStats(upToRound = Infinity) {
+  const stats = {};
+  for (const sid of Object.keys(demoInfo.players)) stats[sid] = 0;
+  for (const rd of (demoInfo.rounds_nades || [])) {
+    if (rd.round_num > upToRound) break;
+    for (const [sid, count] of Object.entries(rd.nades)) {
+      if (sid in stats) stats[sid] += count;
+    }
+  }
+  return stats;
+}
+
+function renderScore(upToRound = Infinity) {
+  $spCtTeam.textContent = demoInfo.team_ct;
+  $spTTeam.textContent  = demoInfo.team_t;
+  const { ct, t } = computeTeamScores(upToRound);
+  $spCtScore.textContent = ct;
+  $spTScore.textContent  = t;
+}
+
+// ── Scoreboard ────────────────────────────────────────────────────────────────
+function renderScoreboard(upToRound = Infinity) {
+  const { players } = demoInfo;
+  const kill_stats  = computeKillStats(upToRound);
+  const nade_stats  = computeNadeStats(upToRound);
+  const ctPlayers   = Object.entries(players).filter(([, p]) => p.team === 'CT');
+  const tPlayers    = Object.entries(players).filter(([, p]) => p.team === 'T');
+  // ADR + KAST come from server (full-match baseline); shown as-is when filtered
+  const serverAdr   = demoInfo.adr  || {};
+  const serverKast  = demoInfo.kast || {};
+
+  function row(sid, p, side) {
+    const st  = kill_stats[sid] || { kills: 0, deaths: 0, hs: 0, assists: 0 };
+    const hs  = st.kills ? Math.round(st.hs / st.kills * 100) : 0;
+    const nds = nade_stats[sid] || 0;
+    const adr  = serverAdr[sid]  != null ? serverAdr[sid].toFixed(1)  : '—';
+    const kast = serverKast[sid] != null ? serverKast[sid].toFixed(1) : '—';
+    return `<tr class="${side}-row">
+      <td title="${p.name}">${p.name}</td>
+      <td>${st.kills}</td>
+      <td>${st.assists}</td>
+      <td>${st.deaths}</td>
+      <td>${hs}%</td>
+      <td>${adr}</td>
+      <td>${kast}</td>
+      <td>${nds}</td>
+    </tr>`;
+  }
+
+  $spBoardBody.innerHTML =
+    ctPlayers.map(([sid, p]) => row(sid, p, 'ct')).join('') +
+    '<tr class="divider"><td colspan="8"></td></tr>' +
+    tPlayers.map(([sid, p]) => row(sid, p, 't')).join('');
+}
+
+// ── Player side per round ─────────────────────────────────────────────────────
+function getPlayerSideInRound(sid, roundNum) {
+  const p = demoInfo?.players?.[sid];
+  if (!p) return null;
+  const half = Math.floor((roundNum - 1) / 12) % 2;
+  return half === 0 ? p.team : (p.team === 'CT' ? 'T' : 'CT');
+}
+
+function applyHeatmapRoundFilter() {
+  if (!demoInfo) return;
+  $roundBtns.querySelectorAll('[data-round]:not([data-round=""])').forEach(btn => {
+    const rn = parseInt(btn.dataset.round);
+    if (!filterSide || !selectedSid) {
+      btn.disabled = false;
+      btn.classList.remove('chip-disabled');
+      return;
+    }
+    const playerSide   = getPlayerSideInRound(selectedSid, rn);
+    const shouldDisable = playerSide !== null && playerSide !== filterSide;
+    btn.disabled = shouldDisable;
+    btn.classList.toggle('chip-disabled', shouldDisable);
+    // If currently selected round gets disabled, clear it
+    if (shouldDisable && btn.classList.contains('active')) {
+      btn.classList.remove('active');
+      $roundBtns.querySelector('[data-round=""]')?.classList.add('active');
+      filterRound = '';
+    }
+  });
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const { players, team_ct, team_t } = demoInfo;
+  const ctEntries = Object.entries(players).filter(([, p]) => p.team === 'CT');
+  const tEntries  = Object.entries(players).filter(([, p]) => p.team === 'T');
+  $sidebar.innerHTML = `
+    <div class="team-section">
+      <div class="team-header">
+        <span class="team-side ct">Counter-Terrorists</span>
+        <span class="team-name-label">${team_ct}</span>
+      </div>
+      ${ctEntries.map(([sid, p]) => playerBtn(sid, p.name, 'ct')).join('')}
+    </div>
+    <div class="team-section">
+      <div class="team-header">
+        <span class="team-side t">Terrorists</span>
+        <span class="team-name-label">${team_t}</span>
+      </div>
+      ${tEntries.map(([sid, p]) => playerBtn(sid, p.name, 't')).join('')}
+    </div>`;
+  $sidebar.querySelectorAll('.player-btn').forEach(btn =>
+    btn.addEventListener('click', () => selectPlayer(btn.dataset.sid, btn.dataset.side))
+  );
+}
+function playerBtn(sid, name, side) {
+  return `<button class="player-btn" data-sid="${sid}" data-side="${side}">
+    <span class="pip ${side}"></span>${name}
+  </button>`;
+}
+function selectPlayer(sid, side) {
+  document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('active','ct','t'));
+  $sidebar.querySelector(`.player-btn[data-sid="${sid}"]`)?.classList.add('active', side);
+  selectedSid = sid;
+  applyHeatmapRoundFilter();
+  fetchHeatmap();
+  drawAtTime(currentSec);
+}
+
+// ── View mode ─────────────────────────────────────────────────────────────────
+function setViewMode(mode) {
+  viewMode = mode;
+  if (mode === 'replay') {
+    $controls.style.display   = 'none';
+    $replayBar.style.display  = 'block';
+    $tabReplay.classList.add('active');
+    $tabHeatmap.classList.remove('active');
+    if (replayData) drawAtTime(currentSec);
+  } else {
+    $controls.style.display   = 'flex';
+    $replayBar.style.display  = 'none';
+    $tabReplay.classList.remove('active');
+    $tabHeatmap.classList.add('active');
+    drawHeatmapCanvas();
+    if (selectedSid) fetchHeatmap();
+  }
+}
+
+// ── Heatmap controls ──────────────────────────────────────────────────────────
+function buildReplayRoundStrip() {
+  $replayRoundStrip.innerHTML = '';
+  for (let i = 1; i <= demoInfo.round_count; i++) {
+    const rdInfo = demoInfo.rounds_info?.find(r => r.round_num === i);
+    const btn = document.createElement('button');
+    btn.className   = 'round-chip';
+    btn.textContent = i;
+    btn.title = rdInfo?.win_reason ? (WIN_REASONS[rdInfo.win_reason] || '') : '';
+    if (rdInfo?.winner === 'CT') btn.classList.add('ct-win');
+    else if (rdInfo?.winner === 'T') btn.classList.add('t-win');
+    btn.addEventListener('click', () => loadRoundTicks(i));
+    $replayRoundStrip.appendChild(btn);
+  }
+}
+
+function renderControls() {
+  $roundBtns.innerHTML = `<button class="chip active" data-round="">All</button>`;
+  for (let i = 1; i <= demoInfo.round_count; i++) {
+    const rdInfo = demoInfo.rounds_info?.find(r => r.round_num === i);
+    const btn = document.createElement('button');
+    btn.className     = 'chip';
+    btn.dataset.round = i;
+    btn.textContent   = i;
+    if (rdInfo?.winner === 'CT') btn.style.color = 'rgba(56,189,248,.8)';
+    else if (rdInfo?.winner === 'T') btn.style.color = 'rgba(251,146,60,.8)';
+    $roundBtns.appendChild(btn);
+  }
+  $roundBtns.addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip || chip.disabled) return;
+    $roundBtns.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+    chip.classList.add('active');
+    filterRound = chip.dataset.round;
+    fetchHeatmap();
+    const rn = filterRound ? parseInt(filterRound) : Infinity;
+    renderScore(rn);
+    renderScoreboard(rn);
+    if (filterRound) loadRoundTicks(parseInt(filterRound));
+  });
+  $sideBtns.querySelectorAll('.chip').forEach(btn =>
+    btn.addEventListener('click', () => {
+      $sideBtns.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filterSide = btn.dataset.side;
+      applyHeatmapRoundFilter();
+      fetchHeatmap();
+    })
+  );
+  $aliveOnly.addEventListener('change', fetchHeatmap);
+  buildReplayRoundStrip();
+  $viewTabBar.style.display = 'flex';
+  setViewMode('replay');
+  $tabReplay.addEventListener('click',  () => setViewMode('replay'));
+  $tabHeatmap.addEventListener('click', () => setViewMode('heatmap'));
+}
+
+// ── Map ───────────────────────────────────────────────────────────────────────
+function showMap() {
+  $placeholder.style.display = 'none';
+  $mapWrap.style.display     = 'block';
+  $mapBase.src    = `/maps/${demoInfo.map_name}.png`;
+  $heatmapImg.src = '';
+}
+
+// ── Heatmap fetch ─────────────────────────────────────────────────────────────
+async function fetchHeatmap() {
+  if (!selectedSid || viewMode !== 'heatmap') return;
+  const params = new URLSearchParams({ steamid: selectedSid });
+  if (filterRound) params.set('round_num', filterRound);
+  if (filterSide)  params.set('side', filterSide);
+  params.set('alive_only', $aliveOnly.checked);
+  params.set('sigma', $sigmaSlider ? $sigmaSlider.value : 8);
+  $loadRing.classList.add('show');
+  setStatus('Generating heatmap…');
+  try {
+    const r = await fetch(`/api/heatmap/${encodeURIComponent(demoName)}?${params}`);
+    if (!r.ok) throw new Error(await r.text());
+    const blob = await r.blob();
+    if ($heatmapImg.src.startsWith('blob:')) URL.revokeObjectURL($heatmapImg.src);
+    $heatmapImg.src = URL.createObjectURL(blob);
+    // drawHeatmapCanvas() is called by the img load event
+    setStatus(`${demoInfo.players[selectedSid]?.name} · alive positions`);
+  } catch (err) {
+    setStatus('Error: ' + err.message, true);
+  } finally {
+    $loadRing.classList.remove('show');
+  }
+}
+
+// ── Tick / replay data ────────────────────────────────────────────────────────
+async function loadRoundTicks(roundNum) {
+  if (!demoName) return;
+  try {
+    const r = await fetch(`/api/ticks/${encodeURIComponent(demoName)}?round_num=${roundNum}`);
+    if (!r.ok) return;
+    if (isPlaying) pause();
+    replayData    = await r.json();
+    replayRound   = roundNum;
+    currentSec    = 0;
+    lastKillCount = -1;
+    lastEcoFrame  = -1;
+    grenadeData   = null;
+    loadRoundGrenades(roundNum);  // fire & forget
+
+    // Round result tag
+    const rdInfo = demoInfo?.rounds_info?.find(rd => rd.round_num === roundNum);
+    if (rdInfo?.winner) {
+      const winLabel = WIN_REASONS[rdInfo.win_reason] || rdInfo.winner + ' Win';
+      $replayRoundTag.textContent   = `R${roundNum} — ${winLabel}`;
+      $replayRoundTag.style.color   = rdInfo.winner === 'CT' ? 'var(--ct)' : 'var(--t)';
+    } else {
+      $replayRoundTag.textContent = `Round ${roundNum}`;
+      $replayRoundTag.style.color = '';
+    }
+
+    // Freeze zone indicator
+    const freezePct = replayData.freeze_end_s / replayData.duration_s * 100;
+    $scrubberFreeze.style.width = freezePct + '%';
+
+    // Event markers
+    $scrubberMarkers.innerHTML = '';
+    for (const k of replayData.kills) {
+      const pct = Math.max(0, Math.min(100, k.rel_s / replayData.duration_s * 100));
+      const el = document.createElement('div');
+      el.className = 's-marker kill';
+      el.style.left = pct + '%';
+      $scrubberMarkers.appendChild(el);
+    }
+    for (const b of replayData.bomb_plants) {
+      const pct = Math.max(0, Math.min(100, b.rel_s / replayData.duration_s * 100));
+      const el = document.createElement('div');
+      el.className = 's-marker bomb';
+      el.style.left = pct + '%';
+      $scrubberMarkers.appendChild(el);
+    }
+
+    syncCanvas();
+    drawAtTime(0);
+    updateScrubber();
+    updateStatsPanel();
+
+    // Update replay round strip active state
+    $replayRoundStrip.querySelectorAll('.round-chip').forEach((btn, idx) => {
+      btn.classList.toggle('active', idx + 1 === roundNum);
+    });
+    const activeChip = $replayRoundStrip.querySelector('.round-chip.active');
+    if (activeChip) activeChip.scrollIntoView({ block: 'nearest', inline: 'center' });
+
+    // Sync score + scoreboard to this round
+    renderScore(roundNum);
+    renderScoreboard(roundNum);
+  } catch (err) {
+    console.error('Tick load failed:', err);
+  }
+}
+
+// ── Grenade data loader ────────────────────────────────────────────────────────
+async function loadRoundGrenades(roundNum) {
+  if (!demoName) return;
+  try {
+    const r = await fetch(`/api/grenades/${encodeURIComponent(demoName)}?round_num=${roundNum}`);
+    if (!r.ok) return;
+    grenadeData = (await r.json()).grenades;
+  } catch (e) {
+    grenadeData = null;
+  }
+}
+
+// ── Interpolation ─────────────────────────────────────────────────────────────
+function findFrame(seconds) {
+  if (!replayData) return 0;
+  const frames = replayData.frames;
+  let lo = 0, hi = frames.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (frames[mid].rel_s <= seconds) lo = mid; else hi = mid - 1;
+  }
+  return lo;
+}
+
+// Shortest-path angular lerp (handles 359° → 1° wrapping correctly)
+function lerpAngle(a0, a1, t) {
+  let diff = a1 - a0;
+  while (diff >  180) diff -= 360;
+  while (diff < -180) diff += 360;
+  return a0 + diff * t;
+}
+
+function getInterpolatedPlayers(t) {
+  if (!replayData) return [];
+  const frames = replayData.frames;
+  const idx    = findFrame(t);
+  const f0     = frames[idx];
+  if (idx >= frames.length - 1) return f0.players;
+
+  const f1   = frames[idx + 1];
+  const span = f1.rel_s - f0.rel_s;
+  if (span <= 0) return f0.players;
+
+  const alpha = Math.max(0, Math.min(1, (t - f0.rel_s) / span));
+
+  return f0.players.map(p0 => {
+    // Dead players stay at their last known position
+    if (!p0.is_alive) return p0;
+    const p1 = f1.players.find(p => p.steamid === p0.steamid);
+    // If the player is about to die (alive in f0, dead in f1), keep position
+    if (!p1 || !p1.is_alive) return p0;
+    return {
+      ...p0,
+      px:  p0.px  + (p1.px  - p0.px)  * alpha,
+      py:  p0.py  + (p1.py  - p0.py)  * alpha,
+      yaw: lerpAngle(p0.yaw, p1.yaw, alpha),
+    };
+  });
+}
+
+// ── Shared canvas transform helper ────────────────────────────────────────────
+// Replicates CSS: translate(mapX,mapY) scale(mapScale) with transform-origin:center
+function applyCtxZoom() {
+  const cx = canvas.width / 2, cy = canvas.height / 2;
+  ctx.translate(cx + mapX, cy + mapY);
+  ctx.scale(mapScale, mapScale);
+  ctx.translate(-cx, -cy);
+}
+
+// ── Draw players on canvas ────────────────────────────────────────────────────
+function drawAtTime(t) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!canvas.width) return;
+  ctx.save();
+  applyCtxZoom();
+  // Draw map base at full canvas size
+  if ($mapBase.complete && $mapBase.naturalWidth > 0) {
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage($mapBase, 0, 0, canvas.width, canvas.height);
+  }
+  drawPlayers(getInterpolatedPlayers(t));
+  drawGrenades();
+  ctx.restore();
+}
+
+// ── Draw heatmap (canvas version) ─────────────────────────────────────────────
+function drawHeatmapCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!canvas.width) return;
+  ctx.save();
+  applyCtxZoom();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  if ($mapBase.complete && $mapBase.naturalWidth > 0)
+    ctx.drawImage($mapBase, 0, 0, canvas.width, canvas.height);
+  if ($heatmapImg.complete && $heatmapImg.naturalWidth > 0)
+    ctx.drawImage($heatmapImg, 0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+
+// ── Heatmap export ────────────────────────────────────────────────────────────
+function exportHeatmap() {
+  if (!$mapBase.complete || !$mapBase.naturalWidth) return;
+
+  const fmt  = document.getElementById('export-fmt').value;  // 'png' | 'jpeg'
+  const size = 1024;
+  const off  = document.createElement('canvas');
+  off.width  = size;
+  off.height = size;
+  const octx = off.getContext('2d');
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+
+  // Map base
+  octx.drawImage($mapBase, 0, 0, size, size);
+
+  // Heatmap overlay (may not exist yet if no player selected)
+  if ($heatmapImg.complete && $heatmapImg.naturalWidth > 0)
+    octx.drawImage($heatmapImg, 0, 0, size, size);
+
+  // Build a descriptive filename
+  const playerName = (demoInfo?.players[selectedSid]?.name || 'heatmap').replace(/\s+/g, '_');
+  const side  = filterSide  || 'all';
+  const round = filterRound ? `r${filterRound}` : 'all';
+  const ext   = fmt === 'jpeg' ? 'jpg' : 'png';
+  const mapName  = demoInfo?.map_name || 'unknown';
+  const filename = `${mapName}_${playerName}_${side}_${round}.${ext}`;
+
+  const mimeType = fmt === 'jpeg' ? 'image/jpeg' : 'image/png';
+  off.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }, mimeType, fmt === 'jpeg' ? 0.92 : undefined);
+}
+
+document.getElementById('btn-export').addEventListener('click', exportHeatmap);
+
+// ── Draw grenade overlays ─────────────────────────────────────────────────────
+function drawGrenades() {
+  if (!grenadeData || !showNades || !canvas.width) return;
+
+  for (const g of grenadeData) {
+    if (currentSec < g.throw_rel_s || currentSec > g.expire_rel_s) continue;
+    const col  = NADE_COLORS[g.grenade_type] || NADE_COLORS.he;
+    const [lx, ly] = toCanvas(g.land_px, g.land_py);
+
+    // Dashed trajectory path
+    if (g.trajectory && g.trajectory.length > 1) {
+      ctx.save();
+      ctx.strokeStyle = col.traj;
+      ctx.lineWidth   = 1;
+      ctx.globalAlpha = 0.45;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      const [fx, fy] = toCanvas(g.trajectory[0][0], g.trajectory[0][1]);
+      ctx.moveTo(fx, fy);
+      for (let i = 1; i < g.trajectory.length; i++) {
+        const [px, py] = toCanvas(g.trajectory[i][0], g.trajectory[i][1]);
+        ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    if (currentSec < g.detonate_rel_s) {
+      // In-flight: animated dot along trajectory
+      const t  = (currentSec - g.throw_rel_s) / Math.max(0.001, g.detonate_rel_s - g.throw_rel_s);
+      let gx, gy;
+      if (g.trajectory && g.trajectory.length >= 2) {
+        const pts  = g.trajectory;
+        const fi   = Math.min(t * (pts.length - 1), pts.length - 2);
+        const lo   = Math.floor(fi);
+        const frac = fi - lo;
+        const [ax, ay] = toCanvas(pts[lo][0],   pts[lo][1]);
+        const [bx, by] = toCanvas(pts[lo+1][0], pts[lo+1][1]);
+        gx = ax + (bx - ax) * frac;
+        gy = ay + (by - ay) * frac;
+      } else {
+        const [tx2, ty2] = toCanvas(g.throw_px, g.throw_py);
+        gx = tx2 + (lx - tx2) * t;
+        gy = ty2 + (ly - ty2) * t;
+      }
+      ctx.save();
+      ctx.fillStyle   = col.dot;
+      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx.lineWidth   = 1;
+      ctx.shadowColor = col.dot;
+      ctx.shadowBlur  = 6;
+      ctx.beginPath();
+      ctx.arc(gx, gy, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      // Detonated: fading area effect
+      const age      = currentSec - g.detonate_rel_s;
+      const lifespan = Math.max(0.01, g.expire_rel_s - g.detonate_rel_s);
+      const fade     = Math.max(0, 1 - age / lifespan);
+      const r        = NADE_RADIUS[g.grenade_type] * (canvas.width / 1024);
+      ctx.save();
+      ctx.globalAlpha = fade * 0.45;
+      ctx.fillStyle   = col.area;
+      ctx.beginPath();
+      ctx.arc(lx, ly, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = fade * 0.75;
+      ctx.strokeStyle = col.dot;
+      ctx.lineWidth   = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+function drawPlayers(players) {
+  if (!canvas.width || !players.length) return;
+
+  const R     = Math.max(5, canvas.width * 0.009);
+  const FONT  = Math.max(8, canvas.width * 0.011);
+  const SFONT = Math.max(7, FONT * 0.82);
+
+  const inFreeze = replayData && currentSec < replayData.freeze_end_s;
+
+  for (const p of players) {
+    const [cx, cy] = toCanvas(p.px, p.py);
+    const isCtSide   = p.team === 'CT';
+    const color      = isCtSide ? '#38bdf8' : '#fb923c';
+    const isSelected = p.steamid === selectedSid;
+
+    if (!p.is_alive) {
+      // Dead: dimmed X mark
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = color;
+      ctx.lineWidth   = Math.max(1.5, R * 0.25);
+      ctx.lineCap     = 'round';
+      const s = R * 0.65;
+      ctx.beginPath();
+      ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s);
+      ctx.moveTo(cx + s, cy - s); ctx.lineTo(cx - s, cy + s);
+      ctx.stroke();
+      ctx.restore();
+      continue;
+    }
+
+    // Glow ring for the selected player
+    if (isSelected) {
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur  = 14;
+      ctx.strokeStyle = color;
+      ctx.lineWidth   = 2;
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R + 5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Aim direction line
+    if (p.yaw !== undefined) {
+      const yawRad = p.yaw * Math.PI / 180;
+      const adx    = Math.cos(yawRad);
+      const ady    = -Math.sin(yawRad);  // canvas y is flipped vs world y
+      const lineLen = R * 4.5;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth   = 1.5;
+      ctx.lineCap     = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx + adx * (R + 1), cy + ady * (R + 1));
+      ctx.lineTo(cx + adx * lineLen,  cy + ady * lineLen);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Filled dot
+    ctx.save();
+    ctx.fillStyle   = color;
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // Health bar beneath dot
+    const barW = R * 2.2;
+    const barH = Math.max(2, R * 0.3);
+    const barX = cx - barW / 2;
+    const barY = cy + R + 2;
+    const hp   = Math.max(0, Math.min(1, (p.health || 0) / 100));
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = hp > 0.5 ? '#4ade80' : hp > 0.25 ? '#facc15' : '#ef4444';
+    ctx.fillRect(barX, barY, barW * hp, barH);
+    ctx.restore();
+
+    // Weapon name below health bar
+    let labelBottom = barY + barH + 2;
+    if (p.weapon) {
+      ctx.save();
+      ctx.font         = `${SFONT}px 'Segoe UI', sans-serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle    = 'rgba(200,210,220,0.55)';
+      ctx.fillText(p.weapon, cx, labelBottom);
+      labelBottom += SFONT + 1;
+      ctx.restore();
+    }
+
+    // Money — only during freeze phase
+    if (inFreeze && p.balance != null) {
+      ctx.save();
+      ctx.font         = `${SFONT}px 'Segoe UI', sans-serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle    = '#4ade80';
+      ctx.fillText(fmtMoney(p.balance), cx, labelBottom);
+      ctx.restore();
+    }
+
+    // Name label above dot
+    ctx.save();
+    ctx.font         = `bold ${FONT}px 'Segoe UI', sans-serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'bottom';
+    const labelY = cy - R - 4;
+    const tw     = ctx.measureText(p.name).width;
+    const pad    = 3;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(cx - tw / 2 - pad, labelY - FONT - pad, tw + pad * 2, FONT + pad * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(p.name, cx, labelY);
+    ctx.restore();
+  }
+}
+
+// ── Animation loop ────────────────────────────────────────────────────────────
+function rafLoop(ts) {
+  if (lastRafTime === null) lastRafTime = ts;
+  const delta = (ts - lastRafTime) / 1000 * playSpeed;
+  lastRafTime  = ts;
+  currentSec   = Math.min(currentSec + delta, replayData.duration_s);
+
+  drawAtTime(currentSec);
+  updateScrubber();
+  updateStatsPanel();
+
+  if (currentSec >= replayData.duration_s) {
+    isPlaying   = false;
+    lastRafTime = null;
+    updatePlayBtn();
+    return;
+  }
+  rafId = requestAnimationFrame(rafLoop);
+}
+
+function play() {
+  if (!replayData) return;
+  if (currentSec >= replayData.duration_s) { currentSec = 0; }
+  isPlaying   = true;
+  lastRafTime = null;
+  rafId = requestAnimationFrame(rafLoop);
+  updatePlayBtn();
+}
+function pause() {
+  isPlaying = false;
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  lastRafTime = null;
+  updatePlayBtn();
+}
+function updatePlayBtn() {
+  $btnPlay.textContent = isPlaying ? '⏸' : '▶';
+  $btnPlay.title       = isPlaying ? 'Pause' : 'Play';
+}
+
+// ── Scrubber ──────────────────────────────────────────────────────────────────
+function updateScrubber() {
+  if (!replayData) return;
+  const pct = currentSec / replayData.duration_s * 100;
+  $scrubberFill.style.width = pct + '%';
+  $scrubberThumb.style.left = pct + '%';
+  $replayTime.textContent   = `${fmtTime(currentSec)} / ${fmtTime(replayData.duration_s)}`;
+}
+
+function seekToSeconds(s) {
+  if (!replayData) return;
+  currentSec = Math.max(0, Math.min(s, replayData.duration_s));
+  drawAtTime(currentSec);
+  updateScrubber();
+  updateStatsPanel();
+}
+function seekToClientX(clientX) {
+  const rect = $scrubberTrack.getBoundingClientRect();
+  const pct  = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  seekToSeconds(pct * replayData.duration_s);
+}
+
+$scrubberWrap.addEventListener('mousedown', e => {
+  if (!replayData) return;
+  const wasPlaying = isPlaying;
+  if (wasPlaying) pause();
+  seekToClientX(e.clientX);
+  const onMove = e => seekToClientX(e.clientX);
+  const onUp   = () => {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup',   onUp);
+    if (wasPlaying) play();
+  };
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup',   onUp);
+});
+
+// ── Stats panel ───────────────────────────────────────────────────────────────
+function updateStatsPanel() {
+  if (!replayData) return;
+  updateKillFeed();
+  updateEconomy();
+}
+
+function updateKillFeed() {
+  const kills = replayData.kills.filter(k => k.rel_s <= currentSec);
+  if (kills.length === lastKillCount) return;
+  lastKillCount = kills.length;
+
+  if (kills.length === 0) {
+    $spKills.innerHTML = '<span class="sp-empty">No kills yet</span>';
+    return;
+  }
+
+  $spKills.innerHTML = kills.slice(-8).map(k => {
+    const hs  = k.headshot ? '<span class="kill-hs">HS</span>' : '';
+    const wn  = weaponDisplay(k.weapon);
+    const at  = (k.attacker_team || '').toLowerCase();
+    const vt  = (k.victim_team   || '').toLowerCase();
+    return `<div class="kill-entry">
+      <span class="kill-attacker ${at}">${k.attacker_name}</span>
+      <span class="kill-weapon">${wn}</span>
+      <span class="kill-victim ${vt}">${k.victim_name}</span>
+      ${hs}
+    </div>`;
+  }).join('');
+}
+
+function updateEconomy() {
+  const frameIdx = findFrame(currentSec);
+  if (frameIdx === lastEcoFrame) return;
+  lastEcoFrame = frameIdx;
+
+  const frame = replayData.frames[frameIdx];
+  if (!frame) return;
+
+  const ct = frame.players.filter(p => p.team === 'CT');
+  const t  = frame.players.filter(p => p.team === 'T');
+
+  // Inventory category groups (displayed as separate rows)
+  const INV_GROUPS = [
+    ['rifle','sniper','smg','heavy'],                              // primary
+    ['pistol'],                                                    // sidearm
+    ['nade-he','nade-flash','nade-smoke','nade-mol','nade-decoy'], // grenades
+    ['knife'],                                                     // knife / zeus
+    ['bomb'],                                                      // bomb
+  ];
+
+  function ecoRow(p) {
+    const dead        = p.is_alive ? '' : ' eco-dead';
+    const armorBadge  = p.armor > 0
+      ? `<span class="equip-badge armor" title="Armor">${EQUIP_ICONS.armor}</span>` : '';
+    const helmetBadge = p.has_helmet
+      ? `<span class="equip-badge helmet" title="Helmet">${EQUIP_ICONS.helmet}</span>` : '';
+    const kitBadge    = p.has_defuser
+      ? `<span class="equip-badge kit" title="Defuse Kit">${EQUIP_ICONS.kit}</span>` : '';
+    const hp      = Math.max(0, Math.min(100, p.health || 0));
+    const hpColor = hp > 50 ? '#4ade80' : hp > 25 ? '#facc15' : '#ef4444';
+    const inv = p.inventory || [];
+    const invRows = INV_GROUPS.map(cats => {
+      const items = inv.filter(w => cats.includes(getWeaponCategory(w)));
+      if (!items.length) return '';
+      const chips = items.map(w => {
+        const cat   = getWeaponCategory(w);
+        const short = shortWeaponName(w);
+        const act   = (w === p.weapon) ? ' active-wep' : '';
+        const icon  = WEAPON_SVG[cat] || '';
+        return `<span class="inv-chip ${cat}${act}" title="${w}">${icon}<span class="chip-name">${short}</span></span>`;
+      }).join('');
+      return `<div class="eco-inv-group">${chips}</div>`;
+    }).filter(Boolean).join('');
+    const equipRow = (armorBadge || helmetBadge || kitBadge)
+      ? `<div class="eco-inv-group eco-equip-row">${armorBadge}${helmetBadge}${kitBadge}</div>`
+      : '';
+    return `<div class="eco-row${dead}">
+      <div class="eco-row-main">
+        <span class="eco-name ${p.team.toLowerCase()}">${p.name}</span>
+        <div class="eco-hp-wrap"><div class="eco-hp-bar" style="width:${hp}%;background:${hpColor}"></div></div>
+        <span class="eco-hp-val">${hp}</span>
+        <span class="eco-money">${fmtMoney(p.balance)}</span>
+      </div>
+      ${invRows}${equipRow}
+    </div>`;
+  }
+
+  $spEco.innerHTML =
+    ct.map(ecoRow).join('') +
+    '<div class="eco-divider"></div>' +
+    t.map(ecoRow).join('');
+}
+
+// ── Replay controls ───────────────────────────────────────────────────────────
+$btnPlay.addEventListener('click', () => isPlaying ? pause() : play());
+$btnRestart.addEventListener('click', () => {
+  pause();
+  currentSec = 0;
+  drawAtTime(0);
+  updateScrubber();
+  updateStatsPanel();
+});
+$btnEnd.addEventListener('click', () => {
+  pause();
+  if (replayData) seekToSeconds(replayData.duration_s);
+});
+
+$speedBtns.querySelectorAll('.speed-chip').forEach(btn =>
+  btn.addEventListener('click', () => {
+    $speedBtns.querySelectorAll('.speed-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    playSpeed = parseFloat(btn.dataset.speed);
+  })
+);
+
+$btnNades.addEventListener('click', () => {
+  showNades = !showNades;
+  $btnNades.classList.toggle('active', showNades);
+  drawAtTime(currentSec);
+});
+
+// ── Prev / Next round buttons ─────────────────────────────────────────────────
+$btnPrevRound.addEventListener('click', () => {
+  if (!demoInfo) return;
+  const prev = Math.max(1, replayRound - 1);
+  if (prev !== replayRound) loadRoundTicks(prev);
+});
+$btnNextRound.addEventListener('click', () => {
+  if (!demoInfo) return;
+  const next = Math.min(demoInfo.round_count, replayRound + 1);
+  if (next !== replayRound) loadRoundTicks(next);
+});
+
+// ── Sigma slider ──────────────────────────────────────────────────────────────
+$sigmaSlider.addEventListener('input', () => {
+  $sigmaVal.textContent = $sigmaSlider.value;
+  clearTimeout(sigmaDeb);
+  sigmaDeb = setTimeout(fetchHeatmap, 400);
+});
+
+// Spacebar = play/pause, arrow keys = seek ±3s
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space')      { e.preventDefault(); isPlaying ? pause() : play(); }
+  if (e.code === 'ArrowLeft')  { e.preventDefault(); seekToSeconds(currentSec - 3); }
+  if (e.code === 'ArrowRight') { e.preventDefault(); seekToSeconds(currentSec + 3); }
+});
+</script>
+</body>
+</html>
