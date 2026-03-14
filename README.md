@@ -55,4 +55,4 @@ cs2-demo-tool/
 
 ---
 
-Part of [Pedro Brauner's Lab](https://pebrauner.com/lab) · Work in progress
+Part of [Pedro Brauner's Lab](https://pedrobrauner.com/lab) · Work in progress

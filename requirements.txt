@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
+a2wsgi
 requests
 numpy
 pillow
